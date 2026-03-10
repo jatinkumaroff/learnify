@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:8000/api/v1";
+const API_BASE_URL = "https://learnify-backend-sandy.vercel.app/api/v1";
 
 export const USER_API = `${API_BASE_URL}/user`;
 export const COURSE_API = `${API_BASE_URL}/course`;
