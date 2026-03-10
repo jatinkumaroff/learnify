@@ -1,27 +1,35 @@
 import express from "express";
-import upload from "../utils/multer.js"
+import upload from "../utils/multer.js";
 import { uploadMedia } from "../utils/cloudinary.js";
 
 const router = express.Router();
-router.route("/upload-video").post(upload.single("file"), async (req,res) => {
+
+router.route("/upload-video").post(upload.single("file"), async (req, res) => {
     try {
-        const result = await uploadMedia(req.file.path);
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: "No file uploaded" });
+        }
+
+        
+        const b64 = req.file.buffer.toString("base64");
+        const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+
+        const result = await uploadMedia(dataURI);
         if (!result) {
             return res.status(500).json({
-                success : false,
-                message:"Cloudinary is not configured. Update backend/utils/cloudinary.js"
+                success: false,
+                message: "Cloudinary upload failed. Check CLOUDINARY_* env vars on Vercel.",
             });
         }
         res.status(200).json({
-            success : true,
-            message:"File uploaded successfully",
-            data:result
-        })
+            success: true,
+            message: "File uploaded successfully",
+            data: result,
+        });
     } catch (error) {
-        console.log(error);
-        res.status(500).json({
-            message:"Error uploading file"
-        })
+        console.error("Upload error:", error);
+        res.status(500).json({ success: false, message: "Error uploading file" });
     }
-})
+});
+
 export default router;

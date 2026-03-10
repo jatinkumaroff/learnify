@@ -1,11 +1,19 @@
 import mongoose from "mongoose";
+
+// Cache the connection across serverless invocations so we don't open a new
+// connection on every request (Vercel cold-starts each function fresh).
+let isConnected = false;
+
 const connectDB = async () => {
+    if (isConnected) return;
     try {
-        await mongoose.connect("mongodb://127.0.0.1:27017/learnify");
-        console.log("MONGODB connected!!");
+        await mongoose.connect(process.env.MONGO_URI);
+        isConnected = true;
+        console.log("MongoDB connected.");
     } catch (error) {
-        console.log("Failed to connect to local MongoDB at mongodb://127.0.0.1:27017/learnify");
-        console.log(error);
+        console.error("MongoDB connection failed:", error);
+        throw error;
     }
-}
+};
+
 export default connectDB;
