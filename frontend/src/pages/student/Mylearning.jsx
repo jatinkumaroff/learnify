@@ -12,7 +12,7 @@ const Mylearning = () => {
         <div className='my-5'>
             {
                 isLoading ? <MyLearningSkeleton/> :  myLearning.length === 0 ? (<p>Your are NOT Enrolled in any Courses.</p>) : (
-                    <div className='grid grid-col-1 sm:grid-cols-2 md:grid-cols-3 gap-4'>
+                    <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4'>
                         {
                             myLearning.map((course,index) => <Course key={index} course={course}/>)
                         }

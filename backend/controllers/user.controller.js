@@ -39,7 +39,7 @@ export const register  = async(req,res)=>{
         console.log(error);
         return res.status(500).json({
             success: false,
-            message:"failed to login",
+            message:"failed to register",
         })
     }
 }
@@ -71,7 +71,7 @@ export const login  = async(req,res)=>{
         console.log(error);
         return res.status(500).json({
             success: false,
-            message:"failed to register",
+            message:"failed to login",
         })
     }
 }
@@ -85,7 +85,7 @@ export const logout = async(req,res) =>{
         console.log(error);
         return res.status(500).json({
             success:false,
-            message:"failed to load profile"
+            message:"failed to logout"
         })
     }
 }
@@ -107,7 +107,7 @@ export const getUserProfile = async(req,res)=>{
         console.log(error);
         return res.status(500).json({
             success:false,
-            message:"failed to logout"
+            message:"failed to get user profile"
         })
     }
 }
@@ -124,23 +124,28 @@ export const updateProfile = async (req,res)=>{
                 success:false,
             })
         }
-        //remove old photo
-        if(user?.photoUrl){
-            const publicId = user?.photoUrl.split("/").pop().split(".")[0];
-            deleteMediaFromCloudinary(publicId);
+
+        const updatedData = {};
+        if (name) updatedData.name = name;
+
+        // Only process photo if one was actually uploaded
+        if (profilePhoto) {
+            // Remove old photo from cloudinary
+            if(user?.photoUrl){
+                const publicId = user.photoUrl.split("/").pop().split(".")[0];
+                deleteMediaFromCloudinary(publicId);
+            }
+            const cloudResponse = await uploadMedia(profilePhoto.path);
+            if (!cloudResponse?.secure_url) {
+                return res.status(500).json({
+                    message:"Cloudinary is not configured. Update backend/utils/cloudinary.js",
+                    success:false,
+                });
+            }
+            updatedData.photoUrl = cloudResponse.secure_url;
         }
-        //add new photo
-        const cloudResponse =  await uploadMedia(profilePhoto.path);
-        if (!cloudResponse?.secure_url) {
-            return res.status(500).json({
-                message:"Cloudinary is not configured. Update backend/utils/cloudinary.js",
-                success:false,
-            });
-        }
-        const photoUrl = cloudResponse.secure_url;
-        const updatedData = {name,photoUrl};
-        const updatedUser = await User.findByIdAndUpdate(userId,updatedData,{new:true}).select("-password");
-        console.log(photoUrl);
+
+        const updatedUser = await User.findByIdAndUpdate(userId, updatedData, {new:true}).select("-password");
 
         return res.status(200).json({
             success:true,

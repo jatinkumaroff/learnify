@@ -35,7 +35,8 @@ export const getCourseProgress = async (req, res) => {
             }
         })
     } catch (error) {
-        console.log(error)
+        console.log(error);
+        return res.status(500).json({ message: "Failed to get course progress" });
     }
 }
 export const updateLectureProgress = async (req, res) => {
@@ -78,7 +79,8 @@ export const updateLectureProgress = async (req, res) => {
         })
 
     } catch (error) {
-        console.log(error)
+        console.log(error);
+        return res.status(500).json({ message: "Failed to update lecture progress" });
     }
 }
 
@@ -98,6 +100,7 @@ export const markAsCompleted = async (req, res) => {
         return res.status(200).json({ message: "Course marked as completed." });
     } catch (error) {
         console.log(error);
+        return res.status(500).json({ message: "Failed to mark course as completed" });
     }
 };
 
@@ -118,5 +121,52 @@ export const markAsInCompleted = async (req, res) => {
         return res.status(200).json({ message: "Course marked as incompleted." });
     } catch (error) {
         console.log(error);
+        return res.status(500).json({ message: "Failed to mark course as incomplete" });
     }
+};
+
+export const toggleLectureProgress = async (req, res) => {
+  try {
+    const { courseId, lectureId } = req.params;
+    const userId = req.id;
+
+    let courseProgress = await CourseProgress.findOne({ courseId, userId });
+    if (!courseProgress) {
+      // No progress record yet — create one with this lecture marked viewed
+      courseProgress = new CourseProgress({
+        userId,
+        courseId,
+        completed: false,
+        lectureProgress: [{ lectureId, viewed: true }],
+      });
+      await courseProgress.save();
+      return res.status(200).json({ message: "Lecture marked as viewed", viewed: true });
+    }
+
+    const lectureIndex = courseProgress.lectureProgress.findIndex(
+      (lp) => lp.lectureId === lectureId
+    );
+
+    if (lectureIndex !== -1) {
+      // Flip the current viewed state
+      const current = courseProgress.lectureProgress[lectureIndex].viewed;
+      courseProgress.lectureProgress[lectureIndex].viewed = !current;
+    } else {
+      // Not tracked yet — mark as viewed
+      courseProgress.lectureProgress.push({ lectureId, viewed: true });
+    }
+
+    // Recalculate course completion
+    const course = await Course.findById(courseId);
+    const viewedCount = courseProgress.lectureProgress.filter((lp) => lp.viewed).length;
+    courseProgress.completed = course && viewedCount === course.lectures.length;
+
+    await courseProgress.save();
+
+    const newState = courseProgress.lectureProgress.find((lp) => lp.lectureId === lectureId)?.viewed ?? false;
+    return res.status(200).json({ message: "Lecture progress toggled", viewed: newState });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: "Failed to toggle lecture progress" });
+  }
 };

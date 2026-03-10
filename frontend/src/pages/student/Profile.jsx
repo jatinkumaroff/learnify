@@ -34,10 +34,10 @@ const Profile = () => {
     useEffect(() => {
         if (isSuccess) {
             refetch();
-            toast.success(data.message || "Profile Updated")
+            toast.success(updateUserData?.message || "Profile Updated")
         }
         if (isError) {
-            toast.error(data.message || "Something went wrong")
+            toast.error(error?.data?.message || "Something went wrong")
         }
     }, [error, updateUserData, isSuccess, isError])
     if (isLoading) return <h1>Profile Loading...</h1>

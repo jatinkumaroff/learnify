@@ -79,7 +79,7 @@ const CourseTab = () => {
             toast.success(data.message || "Course Updated")
         }
         if (error) {
-            toast.error(data.message || "Failed to update course")
+            toast.error(error?.data?.message || "Failed to update course")
         }
     }, [isSuccess, error])
 
@@ -105,7 +105,7 @@ const CourseTab = () => {
                     </CardDescription>
                 </div>
                 <div className='space-x-2'>
-                    <Button disabled={courseByIdData?.course.lectures.length === 0} variant='outline' onClick={()=>publishStatusHandler(courseByIdData?.course.isPublished ? "false" : "true")}>;
+                    <Button disabled={courseByIdData?.course.lectures.length === 0} variant='outline' onClick={()=>publishStatusHandler(courseByIdData?.course.isPublished ? "false" : "true")}>
                         {courseByIdData?.course.isPublished ? "Unpublish" : "Publish"}
                     </Button>
                     <Button>Remove Course</Button>
