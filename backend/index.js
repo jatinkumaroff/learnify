@@ -14,22 +14,35 @@ import courseProgressRoute from "./routes/courseProgress.route.js";
 
 const app = express();
 
-const CLIENT_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+// Allow requests from both local dev and the deployed frontend.
+// FRONTEND_URL on Vercel = your production frontend URL.
+// Both are allowed simultaneously so you don't have to change anything
+// when switching between local testing and production.
+const allowedOrigins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    process.env.FRONTEND_URL,
+].filter(Boolean);
 
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
-    origin: CLIENT_URL,
+    origin: (origin, callback) => {
+        // No origin = curl / Postman / server-to-server — allow it
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
     credentials: true,
 }));
 
-// Connect to MongoDB before handling any request.
-// The cached-connection pattern in db.js means this is instant after the first call.
+// Connect DB on every request (cached after first call)
 app.use(async (req, res, next) => {
     try {
         await connectDB();
         next();
     } catch (err) {
+        console.error("DB connection error:", err);
         res.status(500).json({ message: "Database connection failed" });
     }
 });
@@ -40,6 +53,5 @@ app.use("/api/v1/course", courseRoute);
 app.use("/api/v1/purchase", purchaseRoute);
 app.use("/api/v1/progress", courseProgressRoute);
 
-// Export the app — Vercel calls this as a serverless function handler.
-// Do NOT call app.listen() here; Vercel manages the HTTP server itself.
+// Export for Vercel — do NOT call app.listen()
 export default app;
