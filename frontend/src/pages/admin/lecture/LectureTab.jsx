@@ -16,23 +16,19 @@ const getErrorMessage = (error, fallbackMessage) => {
     return fallbackMessage;
 }
 
-// ─── IMPORTANT: fill these two values ───────────────────────────────────────
-// 1. Your Cloudinary cloud name (Settings → Account in Cloudinary dashboard)
-// 2. An UNSIGNED upload preset (Settings → Upload → Upload Presets → Add preset
-//    → set Signing Mode to "Unsigned", save, copy the preset name)
-// Videos are uploaded directly from the browser to Cloudinary because Vercel
-// serverless functions have a 4.5 MB request body limit — way too small for video.
-const CLOUDINARY_CLOUD_NAME = "your_cloud_name";   // ← replace this
-const CLOUDINARY_UPLOAD_PRESET = "your_preset_name"; // ← replace this
-// ────────────────────────────────────────────────────────────────────────────
+// ── Replace these two values with your actual Cloudinary details ─────────────
+// CLOUD_NAME : Cloudinary dashboard → top-right → "Cloud name: xxxxx"
+// UPLOAD_PRESET : Cloudinary → Settings → Upload → Upload Presets
+//                 → Add preset → Signing Mode = Unsigned → Save → copy name
+const CLOUDINARY_CLOUD_NAME = "ddxzyyll9";
+const CLOUDINARY_UPLOAD_PRESET = "learnify_videos";
+// ─────────────────────────────────────────────────────────────────────────────
 
 const LectureTab = () => {
     const [lectureTitle, setLectureTitle] = useState("");
     const [uploadVideoInfo, setUploadVideoInfo] = useState(null);
     const [isFree, setIsFree] = useState(false);
-    // "idle" | "uploading" | "saving" | "saved" | "error"
     const [uploadStatus, setUploadStatus] = useState("idle");
-    const [uploadProgress, setUploadProgress] = useState(0);
 
     const params = useParams();
     const { courseId, lectureId } = params;
@@ -63,42 +59,29 @@ const LectureTab = () => {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Upload directly to Cloudinary from the browser — bypasses the backend
-        // entirely so Vercel's 4.5 MB body limit is never hit.
         const formData = new FormData();
         formData.append("file", file);
         formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-        formData.append("resource_type", "video");
 
         setUploadStatus("uploading");
-        setUploadProgress(0);
-
         try {
             const res = await axios.post(
                 `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`,
-                formData,
-                {
-                    onUploadProgress: ({ loaded, total }) => {
-                        setUploadProgress(Math.round((loaded * 100) / total));
-                    },
-                }
+                formData
             );
-
             const newVideoInfo = {
                 videoUrl: res.data.secure_url,
                 publicId: res.data.public_id,
             };
             setUploadVideoInfo(newVideoInfo);
             setUploadStatus("saving");
-
-            // Auto-save the URL to MongoDB immediately after upload
             await saveToDatabase(newVideoInfo);
             setUploadStatus("saved");
             toast.success("Video uploaded and saved!");
         } catch (err) {
-            console.error("Video upload error:", err);
+            console.error("Video upload error:", err?.response?.data || err.message);
             setUploadStatus("error");
-            toast.error("Video upload failed. Check your Cloudinary preset.");
+            toast.error("Video upload failed. Check your Cloudinary cloud name and preset.");
         }
     };
 
@@ -155,16 +138,11 @@ const LectureTab = () => {
 
                 <div>
                     <Label>Video <span className='text-red-500'>*</span></Label>
-
                     {uploadVideoInfo?.videoUrl && (
                         <p className="text-xs text-gray-400 mt-1 mb-2 break-all">
-                            Saved:{" "}
-                            <a href={uploadVideoInfo.videoUrl} target="_blank" rel="noopener noreferrer" className="underline text-blue-500">
-                                {uploadVideoInfo.videoUrl}
-                            </a>
+                            Saved: <a href={uploadVideoInfo.videoUrl} target="_blank" rel="noopener noreferrer" className="underline text-blue-500">{uploadVideoInfo.videoUrl}</a>
                         </p>
                     )}
-
                     <Input
                         type="file"
                         accept="video/*"
@@ -172,21 +150,10 @@ const LectureTab = () => {
                         className="w-fit"
                         disabled={isBusy}
                     />
-
-                    {uploadStatus === "uploading" && (
-                        <p className="text-sm text-blue-500 font-medium mt-2">
-                            Uploading to Cloudinary... {uploadProgress}%
-                        </p>
-                    )}
-                    {uploadStatus === "saving" && (
-                        <p className="text-sm text-blue-500 font-medium mt-2">Saving to database...</p>
-                    )}
-                    {uploadStatus === "saved" && (
-                        <p className="text-sm text-green-600 font-medium mt-2">✓ Video saved successfully</p>
-                    )}
-                    {uploadStatus === "error" && (
-                        <p className="text-sm text-red-600 font-medium mt-2">✗ Upload failed — please try again</p>
-                    )}
+                    {uploadStatus === "uploading" && <p className="text-sm text-blue-500 font-medium mt-2">Uploading...</p>}
+                    {uploadStatus === "saving"   && <p className="text-sm text-blue-500 font-medium mt-2">Saving...</p>}
+                    {uploadStatus === "saved"    && <p className="text-sm text-green-600 font-medium mt-2">✓ Video saved successfully</p>}
+                    {uploadStatus === "error"    && <p className="text-sm text-red-600 font-medium mt-2">✗ Upload failed — please try again</p>}
                 </div>
 
                 <div className='flex items-center space-x-2'>
